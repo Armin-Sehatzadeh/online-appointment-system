@@ -107,3 +107,67 @@ class Availability(models.Model):
     def __str__(self):
         return f"{self.doctor} - {self.Weekday(self.weekday).label} - {self.start_time} to {self.end_time}"
         
+        
+class Appointment(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        CONFIRMED = 'confirmed', 'Confirmed'
+        CANCELLED = 'cancelled', 'Cancelled'
+        COMPLETED = 'completed', 'Completed'
+        
+        
+    doctor = models.ForeignKey("Doctor", on_delete=models.CASCADE)
+    patient = models.ForeignKey("Patient", on_delete=models.CASCADE)
+    
+    date = models.DateField()
+    time = models.TimeField()
+    
+    status = models.CharField(choices= Status.choices, default=Status.PENDING, max_length=50)
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['doctor', 'date', 'time'],
+                name= 'unique_doctor_appointment_slot'
+            )
+        ]
+        
+    
+    def clean(self):
+        availabilities = Availability.objects.filter(
+            doctor = self.doctor,
+            weekday = self.date.weekday()
+        )
+        
+        if not availabilities.exists():
+            raise ValidationError('Doctor is not available on this day.')
+        
+        
+        valid = False
+
+        for availability in availabilities:
+            if availability.start_time <= self.time < availability.end_time:
+                valid = True
+
+                difference = (
+                    self.time.hour * 60 + self.time.minute
+                ) - (
+                    availability.start_time.hour * 60
+                    + availability.start_time.minute
+                )
+
+                if difference % availability.slot_duration != 0:
+                    raise ValidationError(
+                        'Appointment time is not a valid slot.'
+                    )
+
+                break
+
+        if not valid:
+            raise ValidationError(
+                'Appointment time is outside doctor availability.'
+            )
+        
+    def __str__(self):
+        return f"{self.doctor} - {self.patient} - {self.date} - {self.time}"
+    
