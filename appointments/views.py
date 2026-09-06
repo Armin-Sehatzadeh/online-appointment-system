@@ -2,17 +2,15 @@ from django.shortcuts import render
 from rest_framework import views, permissions
 from rest_framework.response import Response
 from .serializers import PatientRegistrationSerializer, PatientSerializer
+from .models import Patient
+from rest_framework import viewsets
 
 # Create your views here.
 
 
-class View(views.APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get(self, request):
-        return Response({
-            "username": request.user.username
-        })
+class PatientViewSet(viewsets.ModelViewSet):
+    queryset = Patient.objects.all()
+    serializer_class = PatientSerializer
         
 
 class RegisterView(views.APIView):
