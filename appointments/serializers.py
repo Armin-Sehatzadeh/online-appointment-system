@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Patient
+from .models import User, Patient, Doctor
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,6 +20,22 @@ class PatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Patient
         fields = ['phone', 'birth_date', 'address']
+        
+        
+class DoctorSerializer(serializers.ModelSerializer):
+
+    def validate_user(self, user):
+        if user.role != User.Role.DOCTOR:
+            raise serializers.ValidationError(
+                "Selected user must have doctor role."
+            )
+
+        return user
+
+    class Meta:
+        model = Doctor
+        fields = ['id', 'user', 'specialty', 'phone', 'address']
+        read_only_fields = ['id']
 
 
     

@@ -23,6 +23,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 router = DefaultRouter()
 
 router.register('patients', views.PatientViewSet)
+router.register('doctors', views.DoctorViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
