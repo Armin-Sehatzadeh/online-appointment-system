@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from .serializers import PatientRegistrationSerializer, PatientSerializer, DoctorSerializer
 from .models import Patient, Doctor
 from rest_framework import viewsets
-from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin
+from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin, DoctorPermission
 
 # Create your views here.
 
@@ -22,7 +22,7 @@ class PatientViewSet(viewsets.ModelViewSet):
         
 
 class DoctorViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly, IsOwnerOrAdmin]
+    permission_classes = [DoctorPermission]
     queryset = Doctor.objects.all()
     serializer_class = DoctorSerializer
     

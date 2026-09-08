@@ -22,3 +22,22 @@ class IsOwnerOrAdmin(BasePermission):
             request.user == obj.user
         )
         
+class DoctorPermission(BasePermission):
+    
+    def has_permission(self, request, view):
+        
+        return request.user.is_authenticated
+        
+    
+    def has_object_permission(self, request, view, obj):
+        if (request.user.role == 'admin'):
+            return True
+        
+        if (request.user.role == 'patient' and request.method in SAFE_METHODS):
+            return True
+
+        if (request.user.role == 'doctor' and request.method in SAFE_METHODS):
+            return request.user == obj.user
+        
+        return False
+        
