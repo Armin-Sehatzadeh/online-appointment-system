@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import User, Patient, Doctor
+from .models import User, Patient, Doctor, Availability
+from django.core.exceptions import ValidationError
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -54,3 +56,42 @@ class PatientRegistrationSerializer(serializers.Serializer):
         
         return patient
     
+    
+class AvailabilitySerializer(serializers.ModelSerializer):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        request = self.context.get('request')
+
+        if not request or getattr(request.user, 'role', None) != User.Role.ADMIN:
+            self.fields['doctor'].read_only = True
+
+    def create(self, validated_data):
+        
+        availability = Availability(**validated_data)
+        try:
+            availability.full_clean()
+        except ValidationError as e:
+            raise serializers.ValidationError(e.message_dict)
+        
+        availability.save()
+        return availability
+    
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        try:
+            instance.full_clean()
+        except ValidationError as e:
+            raise serializers.ValidationError(e.message_dict)
+
+        instance.save()
+        return instance
+
+    class Meta:
+        model = Availability
+        fields = ['id', 'doctor', 'weekday', 'start_time', 'end_time', 'slot_duration']
+        read_only_fields = ['id']
+        

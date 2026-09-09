@@ -1,10 +1,10 @@
 from django.shortcuts import render
 from rest_framework import views, permissions
 from rest_framework.response import Response
-from .serializers import PatientRegistrationSerializer, PatientSerializer, DoctorSerializer
-from .models import Patient, Doctor
+from .serializers import PatientRegistrationSerializer, PatientSerializer, DoctorSerializer, AvailabilitySerializer
+from .models import Patient, Doctor, Availability
 from rest_framework import viewsets
-from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin, DoctorPermission
+from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin, DoctorPermission, AvailabilityPermission
 
 # Create your views here.
 
@@ -32,10 +32,7 @@ class DoctorViewSet(viewsets.ModelViewSet):
         
         return Doctor.objects.filter(user=self.request.user)
         
-        
-        
-    
-    
+      
     
 class RegisterView(views.APIView):
     
@@ -49,3 +46,28 @@ class RegisterView(views.APIView):
         patient_serializer = PatientSerializer( patient )
 
         return Response(patient_serializer.data)
+    
+
+class AvailabilityViewSet(viewsets.ModelViewSet):
+    permission_classes = [AvailabilityPermission]
+    
+    queryset = Availability.objects.all()
+    serializer_class = AvailabilitySerializer
+    
+    def get_queryset(self):
+        
+        if self.request.user.role in ['admin', 'patient']:
+            return Availability.objects.all()
+    
+
+        return Availability.objects.filter(doctor__user=self.request.user)
+    
+    def perform_create(self, serializer):
+        
+        if self.request.user.role == "doctor":
+            doctor = Doctor.objects.get(user=self.request.user)
+            
+        else:
+            doctor = serializer.validated_data['doctor']
+            
+        serializer.save(doctor=doctor)
