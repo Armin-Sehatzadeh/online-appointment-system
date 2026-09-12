@@ -1,11 +1,11 @@
 from django.shortcuts import render
 from rest_framework import views, permissions
 from rest_framework.response import Response
-from .serializers import PatientRegistrationSerializer, PatientSerializer, DoctorSerializer, AvailabilitySerializer
-from .models import Patient, Doctor, Availability
+from .serializers import PatientRegistrationSerializer, PatientSerializer, DoctorSerializer, AvailabilitySerializer, AppointmentSerializer
+from .models import Patient, Doctor, Availability, Appointment
 from rest_framework import viewsets
-from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin, DoctorPermission, AvailabilityPermission
-
+from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin, DoctorPermission, AvailabilityPermission, AppointmentPermission
+from django.db import transaction
 # Create your views here.
 
 
@@ -71,3 +71,35 @@ class AvailabilityViewSet(viewsets.ModelViewSet):
             doctor = serializer.validated_data['doctor']
             
         serializer.save(doctor=doctor)
+        
+
+class AppointmentViewSet(viewsets.ModelViewSet):
+    permission_classes = [AppointmentPermission]
+    
+    queryset = Appointment.objects.all()
+    serializer_class = AppointmentSerializer
+    
+    def get_queryset(self):
+        if self.request.user.role == 'admin':
+            return Appointment.objects.all()
+        
+        if self.request.user.role == 'doctor':
+            return Appointment.objects.filter(doctor__user = self.request.user)
+
+        if self.request.user.role == 'patient':
+            return Appointment.objects.filter(patient__user = self.request.user)        
+        
+    def perform_create(self, serializer):
+        
+        with transaction.atomic():
+            
+            doctor = serializer.validated_data['doctor']
+            doctor = Doctor.objects.select_for_update().get(id=doctor.id)
+        
+            if self.request.user.role == "patient":
+                patient = Patient.objects.get(user=self.request.user)
+                
+            else:
+                patient = serializer.validated_data['patient']
+            
+            serializer.save(patient=patient)
