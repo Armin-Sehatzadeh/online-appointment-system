@@ -134,6 +134,13 @@ class Appointment(models.Model):
         
     
     def clean(self):
+        
+        if Holiday.objects.filter(date=self.date).exists():
+            raise ValidationError('Doctor is not available on a holiday') 
+        
+        if DoctorLeave.objects.filter(doctor=self.doctor,date=self.date).exists():   
+            raise ValidationError('Doctor is not available') 
+        
         availabilities = Availability.objects.filter(
             doctor = self.doctor,
             weekday = self.date.weekday()
@@ -170,4 +177,32 @@ class Appointment(models.Model):
         
     def __str__(self):
         return f"{self.doctor} - {self.patient} - {self.date} - {self.time}"
+    
+
+class Holiday(models.Model):
+    
+    date = models.DateField(unique=True)
+    reason = models.CharField(max_length=100)
+    
+    def __str__(self):
+        return f'{self.date} : {self.reason}'
+    
+
+class DoctorLeave(models.Model):
+    
+    doctor = models.ForeignKey("Doctor", on_delete=models.CASCADE)
+    
+    date = models.DateField()
+    reason = models.CharField(max_length=100)
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['doctor', 'date'],
+                name='unique_doctor_and_date_leave'
+            )
+        ]
+    
+    def __str__(self):
+        return f'{self.doctor} : {self.date} : {self.reason}'
     

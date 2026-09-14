@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Patient, Doctor, Availability, Appointment
+from .models import User, Patient, Doctor, Availability, Appointment, Holiday, DoctorLeave
 from django.core.exceptions import ValidationError
 
 
@@ -140,3 +140,34 @@ class AppointmentSerializer(serializers.ModelSerializer):
         model = Appointment
         fields = ['id', 'doctor', 'patient', 'date', 'time', 'status']
         
+        
+class HolidaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Holiday
+        fields = ['id', 'date', 'reason']
+    
+    
+class DoctorLeaveSerializer(serializers.ModelSerializer):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        request = self.context.get('request')
+
+        if not request or request.user.role != User.Role.ADMIN:
+            self.fields['doctor'].read_only = True
+
+    class Meta:
+        model = DoctorLeave
+        fields = ['id', 'doctor', 'date', 'reason']
+        
+    def create(self, validated_data):
+        doctor_leave = DoctorLeave(**validated_data)
+
+        try:
+            doctor_leave.full_clean()
+        except ValidationError as e:
+            raise serializers.ValidationError(e.message_dict)
+
+        doctor_leave.save()
+        return doctor_leave
