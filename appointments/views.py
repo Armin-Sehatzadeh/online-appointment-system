@@ -1,11 +1,12 @@
 from django.shortcuts import render
-from rest_framework import views, permissions
+from rest_framework import views, permissions, serializers
 from rest_framework.response import Response
-from .serializers import PatientRegistrationSerializer, PatientSerializer, DoctorSerializer, AvailabilitySerializer, AppointmentSerializer
-from .models import Patient, Doctor, Availability, Appointment
+from .serializers import PatientRegistrationSerializer, PatientSerializer, DoctorSerializer, AvailabilitySerializer, AppointmentSerializer, HolidaySerializer, DoctorLeaveSerializer
+from .models import Patient, Doctor, Availability, Appointment, Holiday, DoctorLeave
 from rest_framework import viewsets
 from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin, DoctorPermission, AvailabilityPermission, AppointmentPermission
 from django.db import transaction
+from django.db import IntegrityError
 # Create your views here.
 
 
@@ -91,15 +92,46 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
     def perform_create(self, serializer):
         
-        with transaction.atomic():
-            
-            doctor = serializer.validated_data['doctor']
-            doctor = Doctor.objects.select_for_update().get(id=doctor.id)
-        
-            if self.request.user.role == "patient":
-                patient = Patient.objects.get(user=self.request.user)
+        try:
+            with transaction.atomic():
                 
-            else:
-                patient = serializer.validated_data['patient']
+                doctor = serializer.validated_data['doctor']
+                doctor = Doctor.objects.select_for_update().get(id=doctor.id)
             
-            serializer.save(patient=patient)
+                if self.request.user.role == "patient":
+                    patient = Patient.objects.get(user=self.request.user)
+                    
+                else:
+                    patient = serializer.validated_data['patient']
+                
+                serializer.save(patient=patient)
+
+        except IntegrityError:
+            raise serializers.ValidationError(
+                "This appointment slot is already booked."
+            )
+            
+
+class HolidayViewSet(viewsets.ModelViewSet):
+    permission_classes = [
+        permissions.IsAuthenticated,
+        IsAdminOrReadOnly
+    ]
+    
+    queryset = Holiday.objects.all()
+    serializer_class = HolidaySerializer
+    
+
+class DoctorLeaveViewSet(viewsets.ModelViewSet):
+    permission_classes = [AvailabilityPermission]
+    
+    queryset = DoctorLeave.objects.all()
+    serializer_class = DoctorLeaveSerializer
+    
+    def perform_create(self, serializer):
+        if self.request.user.role == "doctor":
+            doctor = Doctor.objects.get(user=self.request.user)
+        else:
+            doctor = serializer.validated_data['doctor']
+
+        serializer.save(doctor=doctor)
