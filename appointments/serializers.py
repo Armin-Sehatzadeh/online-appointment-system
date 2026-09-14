@@ -47,13 +47,28 @@ class PatientRegistrationSerializer(serializers.Serializer):
     phone = serializers.CharField()
     birth_date = serializers.DateField()
     address = serializers.CharField()
-    
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError(
+                "A user with this username already exists."
+            )
+        return value
+
     def create(self, validated_data):
         username = validated_data.pop("username")
         password = validated_data.pop("password")
-        user = User.objects.create_user(username=username, password=password)
-        patient = Patient.objects.create(user=user, **validated_data)
-        
+
+        user = User.objects.create_user(
+            username=username,
+            password=password
+        )
+
+        patient = Patient.objects.create(
+            user=user,
+            **validated_data
+        )
+
         return patient
     
     
