@@ -1,8 +1,6 @@
-from django.test import TestCase
 from rest_framework.test import APITestCase
 
 from .models import User, Patient, Appointment, Availability, Doctor, Holiday, DoctorLeave
-# Create your tests here.
 
 class RegisterAPITestCase(APITestCase):
     
@@ -253,6 +251,143 @@ class AppointmentAPITestCase(APITestCase):
             "Doctor is not available",
             response.data["__all__"]
         )   
+        
+    
+    def test_pending_to_confirmed(self):
+        # Patient creates the appointment
+        self.client.force_authenticate(user=self.patient_user)
+
+        data = {
+            "doctor": self.doctor.id,
+            "date": "2026-09-14",
+            "time": "10:00"
+        }
+
+        response = self.client.post(
+            "/api/appointments/",
+            data
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+        appointment_id = response.data["id"]
+
+        # Doctor confirms the appointment
+        self.client.force_authenticate(user=self.doctor_user)
+
+        response = self.client.patch(
+            f"/api/appointments/{appointment_id}/",
+            {"status": "confirmed"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], "confirmed")
+        
+
+    def test_confirmed_to_pending_not_allowed(self):
+        self.client.force_authenticate(user=self.patient_user)
+
+        data = {
+            "doctor": self.doctor.id,
+            "date": "2026-09-14",
+            "time": "10:00"
+        }
+
+        response = self.client.post(
+            "/api/appointments/",
+            data
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+        appointment_id = response.data["id"]
+
+        self.client.force_authenticate(user=self.doctor_user)
+
+        response = self.client.patch(
+            f"/api/appointments/{appointment_id}/",
+            {"status": "confirmed"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.patch(
+            f"/api/appointments/{appointment_id}/",
+            {"status": "pending"}
+        )
+
+        self.assertEqual(response.status_code, 400)
+        
+    
+    def test_confirmed_to_completed(self):
+        self.client.force_authenticate(user=self.patient_user)
+
+        data = {
+            "doctor": self.doctor.id,
+            "date": "2026-09-14",
+            "time": "10:00"
+        }
+
+        response = self.client.post(
+            "/api/appointments/",
+            data
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+        appointment_id = response.data["id"]
+
+        self.client.force_authenticate(user=self.doctor_user)
+
+        response = self.client.patch(
+            f"/api/appointments/{appointment_id}/",
+            {"status": "confirmed"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.patch(
+            f"/api/appointments/{appointment_id}/",
+            {"status": "completed"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], "completed")
+        
+    
+    def test_cancelled_to_confirmed_not_allowed(self):
+        self.client.force_authenticate(user=self.patient_user)
+
+        data = {
+            "doctor": self.doctor.id,
+            "date": "2026-09-14",
+            "time": "10:00"
+        }
+
+        response = self.client.post(
+            "/api/appointments/",
+            data
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+        appointment_id = response.data["id"]
+
+        self.client.force_authenticate(user=self.doctor_user)
+
+        response = self.client.patch(
+            f"/api/appointments/{appointment_id}/",
+            {"status": "cancelled"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.patch(
+            f"/api/appointments/{appointment_id}/",
+            {"status": "confirmed"}
+        )
+
+        self.assertEqual(response.status_code, 400)
 
 
 class AvailabilityAPITestCase(APITestCase):

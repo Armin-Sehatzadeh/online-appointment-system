@@ -150,7 +150,26 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
-
+    
+    def validate_status(self, value):
+        
+        allowed_transitions = {
+        "pending": ["confirmed", "cancelled"],
+        "confirmed": ["completed", "cancelled"],
+        "cancelled": [],
+        "completed": []
+        }
+        
+        if not self.instance:
+            return value
+        
+        status = self.instance.status
+        
+        if value in allowed_transitions[status]:
+            return value
+        
+        raise serializers.ValidationError("Not a valid status transition.")
+        
     class Meta:
         model = Appointment
         fields = ['id', 'doctor', 'patient', 'date', 'time', 'status']
