@@ -80,6 +80,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
     
+    filterset_fields = ['status', 'date', 'doctor', 'patient']
+    
+    ordering_fields = ['date', 'time', 'status']
+    
     def get_queryset(self):
         if self.request.user.role == 'admin':
             return Appointment.objects.all()
