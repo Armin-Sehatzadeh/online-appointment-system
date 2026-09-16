@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'appointments',
     'rest_framework',
     'django_filters',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -139,4 +140,15 @@ REST_FRAMEWORK = {
     
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+    
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Online Appointment API',
+    'DESCRIPTION': 'API documentation for online appointment system',
+    'VERSION': '1.0.0',
+    'SERVERS': [
+    {'url': 'http://127.0.0.1:8000'},
+    ],
 }
