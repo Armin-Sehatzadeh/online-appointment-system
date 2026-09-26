@@ -85,14 +85,19 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     ordering_fields = ['date', 'time', 'status']
     
     def get_queryset(self):
+        queryset = Appointment.objects.select_related(
+            'doctor',
+            'patient'
+        )
+
         if self.request.user.role == 'admin':
-            return Appointment.objects.all()
-        
+            return queryset
+
         if self.request.user.role == 'doctor':
-            return Appointment.objects.filter(doctor__user = self.request.user)
+            return queryset.filter(doctor__user=self.request.user)
 
         if self.request.user.role == 'patient':
-            return Appointment.objects.filter(patient__user = self.request.user)        
+            return queryset.filter(patient__user=self.request.user)       
         
     def perform_create(self, serializer):
         

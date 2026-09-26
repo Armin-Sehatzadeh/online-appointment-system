@@ -427,8 +427,8 @@ class AvailabilityAPITestCase(APITestCase):
         response = self.client.get("/api/availabilities/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
-        
+        self.assertEqual(len(response.data["results"]), 1)        
+    
     
     def test_patient_cannot_create_availability(self):
         self.client.force_authenticate(user=self.patient_user)
@@ -472,8 +472,7 @@ class AvailabilityAPITestCase(APITestCase):
                 weekday=0
             ).exists()
         )
-    
-    
+        
     def test_doctor_can_only_see_own_availability(self):
         other_doctor_user = User.objects.create_user(
             username="other_doctor",
@@ -509,9 +508,9 @@ class AvailabilityAPITestCase(APITestCase):
         response = self.client.get("/api/availabilities/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["doctor"], self.doctor.id)
-        
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["doctor"], self.doctor.id)
+
     
     def test_doctor_cannot_update_other_doctors_availability(self):
         other_doctor_user = User.objects.create_user(
@@ -597,4 +596,82 @@ class AvailabilityAPITestCase(APITestCase):
             "This availability overlaps with an existing availability.",
             response.data["__all__"]
         )
+     
         
+from django.test import TestCase
+
+class QueryOptimizationTest(TestCase):
+
+    def setUp(self):
+        self.doctor = Doctor.objects.create(
+            user=User.objects.create_user(
+                username='doctor_test',
+                password='12345678',
+                role='doctor'
+            ),
+            specialty='Cardiology',
+            phone='09121111111'
+        )
+
+        self.doctor2 = Doctor.objects.create(
+            user=User.objects.create_user(
+                username='doctor_test_2',
+                password='12345678',
+                role='Dermatology'
+            ),
+            specialty='Dermatology',
+            phone='09123333333'
+        )
+
+        self.patient = Patient.objects.create(
+            user=User.objects.create_user(
+                username='patient_test',
+                password='12345678',
+                role='patient'
+            ),
+            phone='09122222222',
+            birth_date='2000-01-01'
+        )
+
+        Appointment.objects.create(
+            doctor=self.doctor,
+            patient=self.patient,
+            date='2026-10-05',
+            time='10:00',
+        )
+
+        Appointment.objects.create(
+            doctor=self.doctor,
+            patient=self.patient,
+            date='2026-10-05',
+            time='11:00',
+        )
+
+        Appointment.objects.create(
+            doctor=self.doctor,
+            patient=self.patient,
+            date='2026-10-05',
+            time='12:00',
+        )
+
+        Appointment.objects.create(
+            doctor=self.doctor2,
+            patient=self.patient,
+            date='2026-10-05',
+            time='13:00',
+        )
+        
+    def test_n_plus_one_query(self):
+        with self.assertNumQueries(1):
+            appointments = Appointment.objects.select_related('doctor__user').all()
+
+            for appointment in appointments:
+                print(appointment.doctor)
+                
+    def test_doctor_appointments_with_prefetch(self):
+        with self.assertNumQueries(2):
+            doctors = Doctor.objects.prefetch_related('appointment_set').all()
+
+            for doctor in doctors:
+                appointments = list(doctor.appointment_set.all())
+                

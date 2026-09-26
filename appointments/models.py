@@ -131,7 +131,9 @@ class Appointment(models.Model):
                 name= 'unique_doctor_appointment_slot'
             )
         ]
-        
+        indexes =[
+        models.Index(fields=['date']),
+        ]
     
     def clean(self):
         
