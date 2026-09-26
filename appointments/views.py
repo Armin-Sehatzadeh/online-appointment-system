@@ -7,7 +7,10 @@ from rest_framework import viewsets
 from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin, DoctorPermission, AvailabilityPermission, AppointmentPermission
 from django.db import transaction
 from django.db import IntegrityError
-# Create your views here.
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class PatientViewSet(viewsets.ModelViewSet):

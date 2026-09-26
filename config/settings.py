@@ -156,3 +156,36 @@ SPECTACULAR_SETTINGS = {
     {'url': 'http://127.0.0.1:8000'},
     ],
 }
+
+LOGGING = {
+    'version': 1,
+    
+    'formatters': {
+        'verbose': {
+        'format': '{asctime} | {levelname} | {name} | {message}',
+        'style': '{',
+        },
+    },
+
+    'handlers': {
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': 'django.log',
+            'formatter': 'verbose',
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+        },
+    },
+
+    'loggers': {
+        'appointments': {
+            'handlers': ['file'],
+            'level': 'ERROR',
+        },
+        'django.request': {
+        'handlers': ['file'],
+        'level': 'ERROR',
+        'propagate': False,
+        }
+    },
+}
