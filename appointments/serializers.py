@@ -118,7 +118,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
         request = self.context.get('request')
 
-        if request:
+        if request and request.user.is_authenticated:
             if request.user.role == User.Role.PATIENT:
                 self.fields['patient'].read_only = True
 
@@ -188,7 +188,7 @@ class DoctorLeaveSerializer(serializers.ModelSerializer):
 
         request = self.context.get('request')
 
-        if not request or request.user.role != User.Role.ADMIN:
+        if not request or not request.user.is_authenticated or request.user.role != User.Role.ADMIN:
             self.fields['doctor'].read_only = True
 
     class Meta:
